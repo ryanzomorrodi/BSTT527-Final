@@ -1,0 +1,657 @@
+---
+title: "Predicting Diabetes Status"
+author: Ryan Zomorrodi
+date: 12/10/2024
+bibliography: citations.bib
+format: 
+    clean-revealjs: default
+---
+
+## Introduction
+
+::::: columns
+
+::: {.column width="50%"}
+- Diabetes is a significant global health challenge which affects millions of individuals and places immense strain on healthcare systems.
+- In the United States, over 38.1 million adults—approximately 14.7% of adults—are estimated to have diabetes, with an additional 97.6 million adults (38%) having prediabetes [@cdc_national_2024].
+:::
+::: {.column width="50%"}
+![](https://www.healthsystemtracker.org/wp-content/uploads/2019/11/Diabetes-Featured-Image.png)
+:::
+:::::
+
+## Data Background
+
+::::: columns
+
+::: {.column width="50%"}
+- 253,680 observations  
+- Cross-sectional survey data
+- 35,346 (13.9%) diabetic and prediabetic  
+- 21 predictors  
+  - Demographics
+  - General health
+  - Heart health
+  - Behavioral factors
+  - Healthcare access
+:::
+
+::: {.column width="50%"}
+![](https://www.cdc.gov/vision-health-data/media/images/19-BRFSS.png)
+:::
+:::::
+
+## Aims
+
+- Evaluate five predictive models to predict diabetic status based off of predictors without the need for clinical staff or laboratory testing
+- Assess what variables are most associated with diabetic status
+
+## Exploratory Data Analysis - Demographics
+
+::::::: columns
+::::: {.column width="50%"}
+-   Males have higher odds
+-   Older individuals have higher odds, up until about 70-74
+-   Individuals with more education have lower odds
+-   Individuals with higher income have lower odds
+-   All results hold after adjustment
+
+:::::
+
+::::: {.column width="50%" height="70%"}
+
+::: {.scrolltable}
+
+```{=html}
+<style>
+.scrolltable .cell .cell-output-display > div {
+  overflow-y: scroll !important;
+  height: 45vh !important;
+}
+</style>
+```
+
+```{r}
+#| echo: false
+library(gt)
+load("or_tibble_comb.RData")
+
+columns <- c("Sex", "Education", "Age", "Income")
+
+gt(
+  or_tibble_comb |>
+    dplyr::filter(variable %in% columns),
+  rowname_col = "label",
+  groupname_col = "variable"
+) |>
+  fmt_number(
+    columns = c(ends_with("or"), ends_with("aor"))
+  ) |>
+  cols_merge(
+    columns = c(estimate_or, lower_ci_or, upper_ci_or),
+    pattern = "<<{1} ({2}-{3})>>"
+  ) |>
+  cols_merge(
+    columns = c(estimate_aor, lower_ci_aor, upper_ci_aor),
+    pattern = "{1}<< ({2}-{3})>>"
+  ) |>
+  cols_label(
+    estimate_or = "Unadjusted",
+    estimate_aor = "Adjusted"
+  ) |>
+  tab_spanner(
+    label = "Odds Ratio (95% Confidence Interval)",
+    columns = starts_with("estimate")
+  ) |>
+  sub_values(
+    values = 1,
+    replacement = "1 (Reference)"
+  ) |>
+  tab_options(
+      table.font.size = 12, 
+      table.font.names = c("Source Sans Pro", "Helvetica", "sans-serif"),
+      table.width = "100%"
+  )
+```
+:::
+:::::
+:::::::
+
+## Exploratory Data Analysis - General Health
+
+:::::: columns
+
+::::: {.column width="50%"}
+
+- Better general health and lower BMI is associated with lower odds of diabetes or prediabetes
+- Number of bad mental health days or physical health days is not associated or weakly associated with diabetes status 
+
+:::::
+
+::::: {.column width="50%" height="70%"}
+
+::: {.scrolltable}
+
+```{=html}
+<style>
+.scrolltable .cell .cell-output-display > div {
+  overflow-y: scroll !important;
+  height: 45vh !important;
+}
+</style>
+```
+
+```{r}
+#| echo: false
+
+columns <- c("General Health", "Difficulty to walk", "BMI class", "Bad physical health days within last 30 class", "Bad mental health days within last 30 class")
+
+gt(
+  or_tibble_comb |>
+    dplyr::filter(variable %in% columns),
+  rowname_col = "label",
+  groupname_col = "variable"
+) |>
+  fmt_number(
+    columns = c(ends_with("or"), ends_with("aor"))
+  ) |>
+  cols_merge(
+    columns = c(estimate_or, lower_ci_or, upper_ci_or),
+    pattern = "<<{1} ({2}-{3})>>"
+  ) |>
+  cols_merge(
+    columns = c(estimate_aor, lower_ci_aor, upper_ci_aor),
+    pattern = "{1}<< ({2}-{3})>>"
+  ) |>
+  cols_label(
+    estimate_or = "Unadjusted",
+    estimate_aor = "Adjusted"
+  ) |>
+  tab_spanner(
+    label = "Odds Ratio (95% Confidence Interval)",
+    columns = starts_with("estimate")
+  ) |>
+  sub_values(
+    values = 1,
+    replacement = "1 (Reference)"
+  ) %>%
+  tab_options(
+      table.font.size = 12, 
+      table.font.names = c("Source Sans Pro", "Helvetica", "sans-serif"),
+      table.width = "100%"
+  )
+```
+:::
+:::::
+:::::::
+
+## Exploratory Data Analysis - Heart Health
+
+::::: columns
+::: {.column width="50%"}
+-   Better heart health is associated with lower odds of diabetes or prediabetes (Even when adjusted for all other variables)
+:::
+
+::: {.column width="50%"}
+```{r}
+#| echo: false
+columns <- c("High Blood Pressure", "High Cholesterol", "Cholesterol Check", "Stroke", "Heart Disease or Attack")
+
+gt(
+  or_tibble_comb |>
+    dplyr::filter(variable %in% columns),
+  rowname_col = "label",
+  groupname_col = "variable"
+) |>
+  fmt_number(
+    columns = c(ends_with("or"), ends_with("aor"))
+  ) |>
+  cols_merge(
+    columns = c(estimate_or, lower_ci_or, upper_ci_or),
+    pattern = "<<{1} ({2}-{3})>>"
+  ) |>
+  cols_merge(
+    columns = c(estimate_aor, lower_ci_aor, upper_ci_aor),
+    pattern = "{1}<< ({2}-{3})>>"
+  ) |>
+  cols_label(
+    estimate_or = "Unadjusted",
+    estimate_aor = "Adjusted"
+  ) |>
+  tab_spanner(
+    label = "Odds Ratio (95% Confidence Interval)",
+    columns = starts_with("estimate")
+  ) |>
+  sub_values(
+    values = 1,
+    replacement = "1 (Reference)"
+  ) %>%
+  tab_options(
+      table.font.size = 12, 
+      table.font.names = c("Source Sans Pro", "Helvetica", "sans-serif"),
+      table.width = "100%"
+  )
+```
+:::
+:::::
+
+## Exploratory Data Analysis - Behavioral Factors
+
+::::: columns
+::: {.column width="50%"}
+-   Most behavioral health factors were insignificant or very weakly significant
+-   Heavy alcohol assumption was more common among individuals who reported better general health
+:::
+
+::: {.column width="50%"}
+```{r}
+#| echo: false
+
+columns <- c("Smoker", "Heavy Alcohol Consumption", "Physically Active", "Consumes Vegetables", "Consumes Fruit")
+
+gt(
+  or_tibble_comb |>
+    dplyr::filter(variable %in% columns),
+  rowname_col = "label",
+  groupname_col = "variable"
+) |>
+  fmt_number(
+    columns = c(ends_with("or"), ends_with("aor"))
+  ) |>
+  cols_merge(
+    columns = c(estimate_or, lower_ci_or, upper_ci_or),
+    pattern = "<<{1} ({2}-{3})>>"
+  ) |>
+  cols_merge(
+    columns = c(estimate_aor, lower_ci_aor, upper_ci_aor),
+    pattern = "{1}<< ({2}-{3})>>"
+  ) |>
+  cols_label(
+    estimate_or = "Unadjusted",
+    estimate_aor = "Adjusted"
+  ) |>
+  tab_spanner(
+    label = "Odds Ratio (95% Confidence Interval)",
+    columns = starts_with("estimate")
+  ) |>
+  sub_values(
+    values = 1,
+    replacement = "1 (Reference)"
+  ) %>%
+  tab_options(
+      table.font.size = 12, 
+      table.font.names = c("Source Sans Pro", "Helvetica", "sans-serif"),
+      table.width = "100%"
+  )
+```
+:::
+:::::
+
+## Exploratory Data Analysis - Access
+
+::::: columns
+::: {.column width="50%"}
+-   Most behavioral health variables were insignificant or very weakly significant
+-   Heavy alcohol assumption was more common among individuals who reported better general health
+:::
+
+::: {.column width="50%"}
+```{r}
+#| echo: false
+
+columns <- c("Healthcare Coverage", "Inable to see doctor due to cost")
+
+gt(
+  or_tibble_comb |>
+    dplyr::filter(variable %in% columns),
+  rowname_col = "label",
+  groupname_col = "variable"
+) |>
+  fmt_number(
+    columns = c(ends_with("or"), ends_with("aor"))
+  ) |>
+  cols_merge(
+    columns = c(estimate_or, lower_ci_or, upper_ci_or),
+    pattern = "<<{1} ({2}-{3})>>"
+  ) |>
+  cols_merge(
+    columns = c(estimate_aor, lower_ci_aor, upper_ci_aor),
+    pattern = "{1}<< ({2}-{3})>>"
+  ) |>
+  cols_label(
+    estimate_or = "Unadjusted",
+    estimate_aor = "Adjusted"
+  ) |>
+  tab_spanner(
+    label = "Odds Ratio (95% Confidence Interval)",
+    columns = starts_with("estimate")
+  ) |>
+  sub_values(
+    values = 1,
+    replacement = "1 (Reference)"
+  ) %>%
+  tab_options(
+      table.font.size = 12, 
+      table.font.names = c("Source Sans Pro", "Helvetica", "sans-serif"),
+      table.width = "100%"
+  )
+```
+:::
+:::::
+
+
+## Modeling Approach
+
+- Trained 5 models
+  - Logistic Regression (Elastic Net)
+  - Decision Tree 
+  - Random Forest
+  - Light Generalized Boosting Model (LightGBM)
+  - Naive Bayes
+- 75% training; 25% validation
+- Majority class was downsampled in training
+- Each model was trained with 5 fold cross validation for 25 candidate hyperparameters combinations and the hyperparameter combination that yielded the highest accuracy was chosen
+
+## Logistic Regression (Elastic Net)
+::::: columns
+
+::: {.column width="50%"}
+Pros:  
+
+- Roughly balanced sensitivity and specificity  
+- Easy to interpet  
+
+Cons:  
+
+- Second to lowest accuracy
+:::
+
+::: {.column width="50%"}
+
+```{r}
+load("table2.RData")
+
+gt(
+  table2 |> dplyr::filter(Model == "Logistic Regression"), 
+  rowname_col = "Model"
+) %>%
+  tab_options(
+      table.font.size = 12, 
+      table.font.names = c("Source Sans Pro", "Helvetica", "sans-serif"),
+      table.width = "100%"
+  )
+```
+
+```{r}
+load("glmnet_imp.RData")
+ojs_define(glmnet_imp)
+```
+
+```{ojs}
+Plot.plot({
+  marginLeft: 300,
+  marks: [
+    Plot.barX(
+      transpose(glmnet_imp), 
+      {
+        x: "estimate", 
+        y: "term", 
+        fill: d => d.estimate >= 0 ? "positive" : "negative",
+        sort: {y: "x", reverse: true}
+      }
+    )
+  ],
+  color: {
+    domain: ["positive", "negative"],
+    range: ["#58a1b5", "#d3d3d3"]
+  },
+  y: {
+    tickSize: 0, 
+  }
+})
+```
+:::
+:::::
+
+## Decision Tree
+
+::::: columns
+
+::: {.column width="50%"}
+Pros:  
+
+- Second highest accuracy
+- Easy to interpet  
+
+Cons:  
+
+- Worst AUC
+- Low specificity
+:::
+
+::: {.column width="50%"}
+
+```{r}
+gt(
+  table2 |> dplyr::filter(Model == "Decision Tree"), 
+  rowname_col = "Model"
+) %>%
+  tab_options(
+      table.font.size = 12, 
+      table.font.names = c("Source Sans Pro", "Helvetica", "sans-serif"),
+      table.width = "100%"
+  )
+```
+
+```{r}
+load("tree_imp.RData")
+ojs_define(tree_imp)
+```
+
+```{ojs}
+Plot.plot({
+  marginLeft: 150,
+  marks: [
+    Plot.barX(
+      transpose(tree_imp), 
+      {
+        x: "Importance", 
+        y: "Variable",
+        fill: "#58a1b5",
+        sort: {y: "x", reverse: true}
+      }
+    )
+  ],
+  y: {
+    tickSize: 0, 
+  }
+})
+```
+:::
+:::::
+
+
+## Random Forest
+
+::::: columns
+
+::: {.column width="50%"}
+Pros:  
+
+- High specificity  
+- High ROC  
+
+Cons:  
+
+- Lowest accuracy
+- Low mean log loss
+- Difficult to interpret
+:::
+
+::: {.column width="50%"}
+
+```{r}
+gt(
+  table2 |> dplyr::filter(Model == "Random Forest"), 
+  rowname_col = "Model"
+) %>%
+  tab_options(
+      table.font.size = 12, 
+      table.font.names = c("Source Sans Pro", "Helvetica", "sans-serif"),
+      table.width = "100%"
+  )
+```
+
+```{r}
+load("rf_imp.RData")
+ojs_define(rf_imp)
+```
+
+```{ojs}
+Plot.plot({
+  marginLeft: 300,
+  marks: [
+    Plot.barX(
+      transpose(rf_imp), 
+      {
+        x: "Importance", 
+        y: "Variable",
+        fill: "#58a1b5",
+        sort: {y: "x", reverse: true}
+      }
+    )
+  ],
+  y: {
+    tickSize: 0, 
+  }
+})
+```
+
+:::
+:::::
+
+## Light Generalized Boosted Model (Light GBM)
+
+::::: columns
+
+::: {.column width="50%"}
+Pros:  
+
+- Relatively balanced sensitivity and specificity  
+- High ROC AUC
+- Highest mean log loss
+
+Cons:  
+
+- Black Box
+:::
+
+::: {.column width="50%"}
+
+```{r}
+gt(
+  table2 |> dplyr::filter(Model == "LightGBM"), 
+  rowname_col = "Model"
+) %>%
+  tab_options(
+      table.font.size = 12, 
+      table.font.names = c("Source Sans Pro", "Helvetica", "sans-serif"),
+      table.width = "100%"
+  )
+```
+
+```{r}
+load("lgbm_imp.RData")
+ojs_define(lgbm_imp)
+```
+
+```{ojs}
+Plot.plot({
+  marginLeft: 300,
+  marks: [
+    Plot.barX(
+      transpose(lgbm_imp), 
+      {
+        x: "Gain", 
+        y: "Feature",
+        fill: "#58a1b5",
+        sort: {y: "x", reverse: true}
+      }
+    )
+  ],
+  y: {
+    tickSize: 0, 
+  }
+})
+```
+:::
+:::::
+
+
+## Naive Bayes
+
+::::: columns
+
+::: {.column width="50%"}
+Pros:  
+
+- High accuracy  
+- High ROC AUC
+
+Cons:  
+
+- Assumption of independence (not valid)  
+- Low specificity
+:::
+
+::: {.column width="50%"}
+
+```{r}
+gt(
+  table2 |> dplyr::filter(Model == "Naive Bayes"), 
+  rowname_col = "Model"
+) %>%
+  tab_options(
+      table.font.size = 12, 
+      table.font.names = c("Source Sans Pro", "Helvetica", "sans-serif"),
+      table.width = "100%"
+  )
+```
+
+:::
+:::::
+
+## Results
+
+```{r}
+
+gt(table2, rowname_col = "Model") %>%
+  tab_options(
+      table.font.size = 12, 
+      table.font.names = c("Source Sans Pro", "Helvetica", "sans-serif"),
+      table.width = "100%"
+  ) %>%
+  data_color(
+    method = "numeric",
+    palette = c("white", "#70aebf"),
+  )
+```
+
+- Naive Bayes had the highest accuracy, due to it's high sensitivity
+- Light GBM and Logistic Regression have relatively high accuracies while maintaining a good balance of sensitivity and specificity
+- High Blood Pressure, General Health, High Cholesterol, BMI, Age were most important among all the models
+
+## Limitations
+
+- The cross-sectional nature of the data, prevents the establishment of temporal or causal relationships
+- Reliance on self-reported information
+- Individuals with lower healthcare access may go undiagnosed
+- Diabetic and pre-diabetic individuals were grouped together
+
+## Future
+
+- Utilize longitudinal data from patients to predict diabetes status at a later point
+- Use a multiclass outcome to predict pre-diabetes and diabetes separately
+- Seek out datasets with additional data like race, hours of sleep, family history, geographic location
+
+## References
